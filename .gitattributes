@@ -1,0 +1,3 @@
+# Quebra de linha LF em todo lugar: assim o flutter pub get não deixa
+# arquivos "modificados" e o git checkout entre etapas não trava no Windows.
+* text=auto eol=lf
