@@ -45,7 +45,8 @@ class SwipeCard extends StatefulWidget {
   const SwipeCard({super.key, required this.child, required this.onSwipe});
 
   final Widget child;
-  final void Function(bool capture) onSwipe; // true = direita = capturar
+  // capture: direita ou cima. star: cima, o super like.
+  final void Function(bool capture, {bool star}) onSwipe;
 
   @override
   State<SwipeCard> createState() => _SwipeCardState();
@@ -55,11 +56,17 @@ class _SwipeCardState extends State<SwipeCard> {
   Offset _offset = Offset.zero; // quanto o card já foi arrastado
   bool _dragging = false;
   bool _flying = false;
+  bool _star = false; // voou para cima: super like
 
   void _onPanEnd(DragEndDetails details) {
     setState(() {
       _dragging = false;
-      if (_offset.dx.abs() > 100) {
+      if (-_offset.dy > 100 && -_offset.dy > _offset.dx.abs()) {
+        // Mais para cima do que para o lado: voa para cima.
+        _flying = true;
+        _star = true;
+        _offset = Offset(_offset.dx, -1000);
+      } else if (_offset.dx.abs() > 100) {
         // Passou do limite: voa para o lado em que estava, bem para fora.
         _flying = true;
         _offset = Offset(_offset.dx.sign * 1000, _offset.dy);
@@ -91,7 +98,7 @@ class _SwipeCardState extends State<SwipeCard> {
             ..rotateZ(_offset.dx / 600),
           // Terminou de voar: avisa a tela do monte.
           onEnd: () {
-            if (_flying) widget.onSwipe(_offset.dx > 0);
+            if (_flying) widget.onSwipe(_star || _offset.dx > 0, star: _star);
           },
           child: widget.child,
         ),
@@ -116,6 +123,7 @@ class _MatchPageState extends State<MatchPage> {
   final List<Pokemon> _captured = []; // os que foram para a mochila
   final List<Pokemon> _history = []; // os que saíram do monte, em ordem
   String _type = ''; // tipo escolhido no filtro; vazio = todos
+  final Set<int> _stars = {}; // números de quem ganhou super like
 
   // Future = um valor que ainda vai chegar (a resposta da internet).
   // late: só é calculado no primeiro uso, quando já existe acesso a widget.
@@ -137,6 +145,9 @@ class _MatchPageState extends State<MatchPage> {
       _captured
         ..clear()
         ..addAll(pokemons.where((p) => savedIds.contains('${p.id}')));
+      _stars
+        ..clear()
+        ..addAll((prefs.getStringList('stars') ?? []).map(int.parse));
       // O monte fica só com quem ainda não foi capturado e é do tipo.
       _deck =
           pokemons
@@ -154,24 +165,29 @@ class _MatchPageState extends State<MatchPage> {
     await prefs.setStringList('captured', [
       for (final pokemon in _captured) '${pokemon.id}',
     ]);
+    // Super like: os números com estrela ficam numa lista à parte.
+    await prefs.setStringList('stars', [for (final id in _stars) '$id']);
   }
 
   // setState avisa o Flutter: "algo mudou, desenhe a tela de novo".
-  void _swipe(bool capture) {
+  // star: super like, captura e ganha estrela.
+  void _swipe(bool capture, {bool star = false}) {
     setState(() {
       final pokemon = _deck.removeAt(0);
       if (capture) _captured.add(pokemon);
+      if (star) _stars.add(pokemon.id);
       _history.add(pokemon);
     });
     _save();
   }
 
   // Desfazer: o último que saiu volta para a frente do monte.
-  // Se ele tinha sido capturado, sai da mochila também.
+  // Se ele tinha sido capturado (ou ganhou super like), sai da mochila.
   void _undo() {
     setState(() {
       final pokemon = _history.removeLast();
       _captured.remove(pokemon);
+      _stars.remove(pokemon.id);
       _deck.insert(0, pokemon);
     });
     _save();
@@ -233,7 +249,8 @@ class _MatchPageState extends State<MatchPage> {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => MyPokedexPage(captured: _captured),
+                builder: (context) =>
+                    MyPokedexPage(captured: _captured, stars: _stars),
               ),
             ),
             child: Text(
@@ -295,7 +312,12 @@ class _MatchPageState extends State<MatchPage> {
                     onPressed: () => _swipe(false),
                     icon: const Icon(Icons.close, color: Colors.red, size: 48),
                   ),
-                  const SizedBox(width: 40),
+                  const SizedBox(width: 24),
+                  IconButton(
+                    onPressed: () => _swipe(true, star: true),
+                    icon: const Icon(Icons.star, color: Colors.blue, size: 48),
+                  ),
+                  const SizedBox(width: 24),
                   IconButton(
                     onPressed: () => _swipe(true),
                     icon: const Icon(
