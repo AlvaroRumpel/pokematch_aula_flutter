@@ -62,3 +62,24 @@ class PokemonDetails {
     );
   }
 }
+
+// Os 17 tipos da primeira geração, para o menu do filtro.
+const pokemonTypes = [
+  'grass',
+  'poison',
+  'fire',
+  'water',
+  'bug',
+  'normal',
+  'electric',
+  'ground',
+  'fairy',
+  'fighting',
+  'psychic',
+  'rock',
+  'ghost',
+  'ice',
+  'dragon',
+  'flying',
+  'steel',
+];

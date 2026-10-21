@@ -12,10 +12,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 // Serviço falso: devolve o que o teste mandar, sem internet.
 class FakePokeApiService extends PokeApiService {
-  FakePokeApiService(this.onFetchPokemons, {this.onFetchDetails});
+  FakePokeApiService(
+    this.onFetchPokemons, {
+    this.onFetchDetails,
+    this.typeIds = const {},
+  });
 
   final Future<List<Pokemon>> Function() onFetchPokemons;
   final Future<PokemonDetails> Function()? onFetchDetails;
+  final Map<String, Set<int>> typeIds; // tipo -> números dos Pokémon
 
   @override
   Future<List<Pokemon>> fetchPokemons() => onFetchPokemons();
@@ -25,6 +30,9 @@ class FakePokeApiService extends PokeApiService {
       // Sem resposta definida, devolve um detalhe vazio na hora.
       onFetchDetails?.call() ??
       Future.value(const PokemonDetails(types: [], height: 0, weight: 0));
+
+  @override
+  Future<Set<int>> fetchTypeIds(String type) async => typeIds[type] ?? {};
 }
 
 Widget profile(Future<PokemonDetails> Function() details) => MaterialApp(
@@ -249,5 +257,30 @@ void main() {
     expect(find.text('Bulbasaur'), findsOneWidget);
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getStringList('captured'), isEmpty);
+  });
+
+  testWidgets('filtrar por tipo mostra só aquele tipo', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MatchPage(
+          service: FakePokeApiService(
+            () async => [bulbasaur, charmander],
+            typeIds: {
+              'fire': {4},
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Bulbasaur'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.filter_list));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('fire'));
+    await tester.pumpAndSettle();
+    expect(find.text('PokéMatch: fire'), findsOneWidget);
+    expect(find.text('Charmander'), findsOneWidget);
+    expect(find.text('Bulbasaur'), findsNothing);
   });
 }

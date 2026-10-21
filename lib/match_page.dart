@@ -115,23 +115,36 @@ class _MatchPageState extends State<MatchPage> {
   List<Pokemon> _deck = []; // o monte: o primeiro é o card da frente
   final List<Pokemon> _captured = []; // os que foram para a mochila
   final List<Pokemon> _history = []; // os que saíram do monte, em ordem
+  String _type = ''; // tipo escolhido no filtro; vazio = todos
 
   // Future = um valor que ainda vai chegar (a resposta da internet).
   // late: só é calculado no primeiro uso, quando já existe acesso a widget.
-  late final Future<void> _future = _loadDeck();
+  late Future<void> _future = _loadDeck();
 
   // async/await: espera a lista chegar e embaralha o monte.
   Future<void> _loadDeck() async {
     final pokemons = await widget.service.fetchPokemons();
+    // Com filtro, pergunta à API quem é daquele tipo (mais 1 requisição).
+    final typeIds = _type.isEmpty
+        ? null
+        : await widget.service.fetchTypeIds(_type);
     // SharedPreferences guarda dados simples no aparelho (no Chrome, no
     // navegador). Aqui ele devolve os números que já foram capturados.
     final prefs = await SharedPreferences.getInstance();
     final savedIds = prefs.getStringList('captured') ?? [];
     // setState: o contador fica fora do FutureBuilder, então avisamos.
     setState(() {
-      _captured.addAll(pokemons.where((p) => savedIds.contains('${p.id}')));
-      // O monte fica só com quem ainda não foi capturado.
-      _deck = pokemons.where((p) => !_captured.contains(p)).toList()..shuffle();
+      _captured
+        ..clear()
+        ..addAll(pokemons.where((p) => savedIds.contains('${p.id}')));
+      // O monte fica só com quem ainda não foi capturado e é do tipo.
+      _deck =
+          pokemons
+              .where((p) => !_captured.contains(p))
+              .where((p) => typeIds == null || typeIds.contains(p.id))
+              .toList()
+            ..shuffle();
+      _history.clear(); // monte novo: não há o que desfazer
     });
   }
 
@@ -175,11 +188,19 @@ class _MatchPageState extends State<MatchPage> {
     );
   }
 
+  // Escolheu um tipo no menu: guarda e busca o monte de novo.
+  void _filter(String type) {
+    setState(() {
+      _type = type;
+      _future = _loadDeck();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('PokéMatch'),
+        title: Text(_type.isEmpty ? 'PokéMatch' : 'PokéMatch: $_type'),
         actions: [
           // Desfazer: desligado (null) quando nada saiu do monte ainda.
           IconButton(
@@ -187,6 +208,25 @@ class _MatchPageState extends State<MatchPage> {
             icon: const Icon(Icons.undo),
             tooltip: 'Desfazer',
             disabledColor: Colors.white38,
+          ),
+          // Menu do filtro: "todos" e cada um dos tipos.
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.filter_list),
+            tooltip: 'Filtrar por tipo',
+            onSelected: _filter,
+            itemBuilder: (context) => [
+              CheckedPopupMenuItem(
+                value: '',
+                checked: _type.isEmpty,
+                child: const Text('todos'),
+              ),
+              for (final type in pokemonTypes)
+                CheckedPopupMenuItem(
+                  value: type,
+                  checked: _type == type,
+                  child: Text(type),
+                ),
+            ],
           ),
           // Contador da mochila: tocar abre a Minha Pokédex.
           TextButton(
