@@ -64,4 +64,56 @@ void main() {
     expect(find.text('🎒 0'), findsOneWidget);
     expect(find.text('Acabaram os Pokémon!'), findsOneWidget);
   });
+
+  testWidgets('arrastar para a direita captura', (tester) async {
+    await tester.pumpWidget(app(() async => [bulbasaur]));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(PokemonCard).last, const Offset(300, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('🎒 1'), findsOneWidget);
+    expect(find.text('Acabaram os Pokémon!'), findsOneWidget);
+  });
+
+  testWidgets('arrastar para a esquerda rejeita', (tester) async {
+    await tester.pumpWidget(app(() async => [bulbasaur]));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(PokemonCard).last, const Offset(-300, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('🎒 0'), findsOneWidget);
+    expect(find.text('Acabaram os Pokémon!'), findsOneWidget);
+  });
+
+  testWidgets('arraste curto volta o card', (tester) async {
+    await tester.pumpWidget(app(() async => [bulbasaur]));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(PokemonCard).last, const Offset(50, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('🎒 0'), findsOneWidget);
+    expect(find.text('Bulbasaur'), findsOneWidget);
+  });
+
+  testWidgets('agarrar o card voando não captura de novo', (tester) async {
+    await tester.pumpWidget(
+      app(
+        () async => [
+          bulbasaur,
+          const Pokemon(id: 4, name: 'Charmander'),
+          const Pokemon(id: 7, name: 'Squirtle'),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+    final card = find.byType(SwipeCard);
+    await tester.drag(card, const Offset(300, 0));
+    await tester.pump(const Duration(milliseconds: 16)); // ainda voando
+    final gesture = await tester.startGesture(tester.getCenter(card));
+    for (var i = 0; i < 5; i++) {
+      await gesture.moveBy(const Offset(10, 0));
+      await tester.pump();
+    }
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('🎒 1'), findsOneWidget);
+  });
 }

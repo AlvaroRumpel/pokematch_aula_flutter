@@ -37,6 +37,66 @@ class PokemonCard extends StatelessWidget {
   }
 }
 
+// Card que dá para arrastar: segue o dedo, inclina e voa para fora.
+class SwipeCard extends StatefulWidget {
+  const SwipeCard({super.key, required this.child, required this.onSwipe});
+
+  final Widget child;
+  final void Function(bool capture) onSwipe; // true = direita = capturar
+
+  @override
+  State<SwipeCard> createState() => _SwipeCardState();
+}
+
+class _SwipeCardState extends State<SwipeCard> {
+  Offset _offset = Offset.zero; // quanto o card já foi arrastado
+  bool _dragging = false;
+  bool _flying = false;
+
+  void _onPanEnd(DragEndDetails details) {
+    setState(() {
+      _dragging = false;
+      if (_offset.dx.abs() > 100) {
+        // Passou do limite: voa para o lado em que estava, bem para fora.
+        _flying = true;
+        _offset = Offset(_offset.dx.sign * 1000, _offset.dy);
+      } else {
+        _offset = Offset.zero; // não passou: volta ao centro
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // IgnorePointer: enquanto o card voa, ninguém consegue agarrar ele.
+    return IgnorePointer(
+      ignoring: _flying,
+      // GestureDetector percebe os gestos: aqui, arrastar (pan).
+      child: GestureDetector(
+        onPanStart: (_) => setState(() => _dragging = true),
+        onPanUpdate: (details) => setState(() => _offset += details.delta),
+        onPanEnd: _onPanEnd,
+        // AnimatedContainer anima sozinho quando o transform muda.
+        // Arrastando: duração zero, o card cola no dedo. Soltou: anima.
+        child: AnimatedContainer(
+          duration: _dragging
+              ? Duration.zero
+              : const Duration(milliseconds: 300),
+          transformAlignment: Alignment.center,
+          // Move o card e inclina um pouco conforme vai para o lado.
+          transform: Matrix4.translationValues(_offset.dx, _offset.dy, 0)
+            ..rotateZ(_offset.dx / 600),
+          // Terminou de voar: avisa a tela do monte.
+          onEnd: () {
+            if (_flying) widget.onSwipe(_offset.dx > 0);
+          },
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
 // Tela do monte: busca os Pokémon, embaralha e mostra um card por vez.
 class MatchPage extends StatefulWidget {
   // O serviço vem de fora: nos testes dá para trocar por um falso.
@@ -113,7 +173,13 @@ class _MatchPageState extends State<MatchPage> {
                       child: Stack(
                         children: [
                           if (_deck.length > 1) PokemonCard(pokemon: _deck[1]),
-                          PokemonCard(pokemon: _deck.first),
+                          // O card da frente dá para arrastar. A key faz o
+                          // Flutter criar um SwipeCard novo a cada Pokémon.
+                          SwipeCard(
+                            key: ValueKey(_deck.first.id),
+                            onSwipe: _swipe,
+                            child: PokemonCard(pokemon: _deck.first),
+                          ),
                         ],
                       ),
                     ),
