@@ -35,4 +35,22 @@ void main() {
     expect(list.length, 2);
     expect(list[1].name, 'Ivysaur');
   });
+
+  test('detalhe lê tipos e converte altura e peso', () {
+    final d = PokemonDetails.fromJson({
+      'height': 7,
+      'weight': 69,
+      'types': [
+        {
+          'type': {'name': 'grass'},
+        },
+        {
+          'type': {'name': 'poison'},
+        },
+      ],
+    });
+    expect(d.types, ['grass', 'poison']);
+    expect(d.height, 0.7);
+    expect(d.weight, 6.9);
+  });
 }

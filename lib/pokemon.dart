@@ -39,3 +39,26 @@ List<Pokemon> pokemonsFromJson(String body) {
       .map((item) => Pokemon.fromJson(item as Map<String, dynamic>))
       .toList();
 }
+
+// Detalhes de um Pokémon para o perfil: tipos, altura e peso.
+class PokemonDetails {
+  final List<String> types;
+  final double height; // em metros
+  final double weight; // em quilos
+
+  const PokemonDetails({
+    required this.types,
+    required this.height,
+    required this.weight,
+  });
+
+  // Lê o JSON de /pokemon/{id}. Os tipos ficam em types[].type.name.
+  // A API manda altura em decímetros e peso em hectogramas: dividimos por 10.
+  factory PokemonDetails.fromJson(Map<String, dynamic> json) {
+    return PokemonDetails(
+      types: [for (final t in json['types']) t['type']['name'] as String],
+      height: json['height'] / 10,
+      weight: json['weight'] / 10,
+    );
+  }
+}

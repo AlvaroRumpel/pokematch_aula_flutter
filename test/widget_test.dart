@@ -4,18 +4,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pokematch/match_page.dart';
+import 'package:pokematch/my_pokedex_page.dart';
 import 'package:pokematch/pokeapi_service.dart';
 import 'package:pokematch/pokemon.dart';
+import 'package:pokematch/profile_page.dart';
 
 // Serviço falso: devolve o que o teste mandar, sem internet.
 class FakePokeApiService extends PokeApiService {
-  FakePokeApiService(this.onFetchPokemons);
+  FakePokeApiService(this.onFetchPokemons, {this.onFetchDetails});
 
   final Future<List<Pokemon>> Function() onFetchPokemons;
+  final Future<PokemonDetails> Function()? onFetchDetails;
 
   @override
   Future<List<Pokemon>> fetchPokemons() => onFetchPokemons();
+
+  @override
+  Future<PokemonDetails> fetchPokemonDetails(int id) =>
+      // Sem resposta definida, devolve um detalhe vazio na hora.
+      onFetchDetails?.call() ??
+      Future.value(const PokemonDetails(types: [], height: 0, weight: 0));
 }
+
+Widget profile(Future<PokemonDetails> Function() details) => MaterialApp(
+  home: ProfilePage(
+    pokemon: bulbasaur,
+    service: FakePokeApiService(() async => [], onFetchDetails: details),
+  ),
+);
 
 Widget app(Future<List<Pokemon>> Function() fetch) =>
     MaterialApp(home: MatchPage(service: FakePokeApiService(fetch)));
@@ -115,5 +131,72 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.text('🎒 1'), findsOneWidget);
+  });
+
+  testWidgets('tocar no card abre o perfil e não captura', (tester) async {
+    await tester.pumpWidget(app(() async => [bulbasaur]));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(PokemonCard).last);
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfilePage), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('🎒 0'), findsOneWidget);
+    expect(find.text('Bulbasaur'), findsOneWidget);
+  });
+
+  testWidgets('perfil mostra dados', (tester) async {
+    await tester.pumpWidget(
+      profile(
+        () async => const PokemonDetails(
+          types: ['grass', 'poison'],
+          height: 0.7,
+          weight: 6.9,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    for (final text in [
+      '#001',
+      'grass',
+      'poison',
+      'Altura: 0.7 m',
+      'Peso: 6.9 kg',
+    ]) {
+      expect(find.text(text), findsOneWidget);
+    }
+    expect(find.textContaining('grass e poison'), findsOneWidget); // a bio
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('perfil mostra carregando e erro', (tester) async {
+    final details = Completer<PokemonDetails>();
+    await tester.pumpWidget(profile(() => details.future));
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    details.completeError(Exception('sem internet'));
+    await tester.pumpAndSettle();
+    expect(find.text('Não foi possível carregar'), findsOneWidget);
+  });
+
+  testWidgets('contador abre a Minha Pokédex com o capturado', (tester) async {
+    await tester.pumpWidget(app(() async => [bulbasaur]));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.favorite));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('🎒 1'));
+    await tester.pumpAndSettle();
+    expect(find.byType(MyPokedexPage), findsOneWidget);
+    expect(find.text('Bulbasaur'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Minha Pokédex vazia', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: MyPokedexPage(captured: [])),
+    );
+    expect(find.text('Ninguém capturado ainda.'), findsOneWidget);
   });
 }

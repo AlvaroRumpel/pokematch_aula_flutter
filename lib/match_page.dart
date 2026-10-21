@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'package:pokematch/my_pokedex_page.dart';
 import 'package:pokematch/pokeapi_service.dart';
 import 'package:pokematch/pokemon.dart';
+import 'package:pokematch/profile_page.dart';
 
 // Card grande de um Pokémon: imagem em cima, nome e número embaixo.
 class PokemonCard extends StatelessWidget {
@@ -130,18 +132,34 @@ class _MatchPageState extends State<MatchPage> {
     });
   }
 
+  // Navigator.push empilha uma nova tela sobre a atual.
+  void _openProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            ProfilePage(pokemon: _deck.first, service: widget.service),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('PokéMatch'),
         actions: [
-          // Contador da mochila: quantos Pokémon já foram capturados.
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
+          // Contador da mochila: tocar abre a Minha Pokédex.
+          TextButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => MyPokedexPage(captured: _captured),
+              ),
+            ),
             child: Text(
               '🎒 ${_captured.length}',
-              style: const TextStyle(fontSize: 18),
+              style: const TextStyle(fontSize: 18, color: Colors.white),
             ),
           ),
         ],
@@ -178,7 +196,11 @@ class _MatchPageState extends State<MatchPage> {
                           SwipeCard(
                             key: ValueKey(_deck.first.id),
                             onSwipe: _swipe,
-                            child: PokemonCard(pokemon: _deck.first),
+                            // Tocar no card (sem arrastar) abre o perfil.
+                            child: GestureDetector(
+                              onTap: _openProfile,
+                              child: PokemonCard(pokemon: _deck.first),
+                            ),
                           ),
                         ],
                       ),
