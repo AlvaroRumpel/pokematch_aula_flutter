@@ -142,7 +142,10 @@ class _MatchPageState extends State<MatchPage> {
     final typeIds = _type.isEmpty
         ? null
         : await widget.service.fetchTypeIds(_type);
-    final types = await widget.service.fetchFirstTypes();
+    // Os tipos para a cor não mudam: busca só na primeira vez.
+    final types = _types.isEmpty
+        ? await widget.service.fetchFirstTypes()
+        : _types;
     // SharedPreferences guarda dados simples no aparelho (no Chrome, no
     // navegador). Aqui ele devolve os números que já foram capturados.
     final prefs = await SharedPreferences.getInstance();
