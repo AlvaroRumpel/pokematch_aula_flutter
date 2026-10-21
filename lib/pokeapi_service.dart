@@ -29,4 +29,19 @@ class PokeApiService {
     }
     return PokemonDetails.fromJson(jsonDecode(response.body));
   }
+
+  // Busca os números dos Pokémon de um tipo (ex.: 'fire'): 1 requisição.
+  Future<Set<int>> fetchTypeIds(String type) async {
+    final response = await http.get(
+      Uri.parse('https://pokeapi.co/api/v2/type/$type'),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('A PokeAPI respondeu ${response.statusCode}');
+    }
+    final data = jsonDecode(response.body);
+    // Cada item tem um "pokemon" no mesmo formato da lista principal.
+    return {
+      for (final item in data['pokemon']) Pokemon.fromJson(item['pokemon']).id,
+    };
+  }
 }
