@@ -29,4 +29,27 @@ class PokeApiService {
     }
     return PokemonDetails.fromJson(jsonDecode(response.body));
   }
+
+  // Busca o primeiro tipo de cada Pokémon: 1 requisição por tipo (17).
+  // /type/fire lista quem é de fogo; slot 1 quer dizer "primeiro tipo".
+  Future<Map<int, String>> fetchFirstTypes() async {
+    // Future.wait faz as 17 requisições ao mesmo tempo e espera todas.
+    final responses = await Future.wait([
+      for (final type in typeColors.keys)
+        http.get(Uri.parse('https://pokeapi.co/api/v2/type/$type')),
+    ]);
+    final firstTypes = <int, String>{};
+    for (final response in responses) {
+      if (response.statusCode != 200) {
+        throw Exception('A PokeAPI respondeu ${response.statusCode}');
+      }
+      final data = jsonDecode(response.body);
+      for (final item in data['pokemon']) {
+        if (item['slot'] == 1) {
+          firstTypes[Pokemon.fromJson(item['pokemon']).id] = data['name'];
+        }
+      }
+    }
+    return firstTypes;
+  }
 }

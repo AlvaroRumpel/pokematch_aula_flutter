@@ -12,10 +12,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 // Serviço falso: devolve o que o teste mandar, sem internet.
 class FakePokeApiService extends PokeApiService {
-  FakePokeApiService(this.onFetchPokemons, {this.onFetchDetails});
+  FakePokeApiService(
+    this.onFetchPokemons, {
+    this.onFetchDetails,
+    this.firstTypes = const {},
+  });
 
   final Future<List<Pokemon>> Function() onFetchPokemons;
   final Future<PokemonDetails> Function()? onFetchDetails;
+  final Map<int, String> firstTypes; // número -> primeiro tipo
 
   @override
   Future<List<Pokemon>> fetchPokemons() => onFetchPokemons();
@@ -25,6 +30,9 @@ class FakePokeApiService extends PokeApiService {
       // Sem resposta definida, devolve um detalhe vazio na hora.
       onFetchDetails?.call() ??
       Future.value(const PokemonDetails(types: [], height: 0, weight: 0));
+
+  @override
+  Future<Map<int, String>> fetchFirstTypes() async => firstTypes;
 }
 
 Widget profile(Future<PokemonDetails> Function() details) => MaterialApp(
@@ -234,5 +242,26 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('🎒 1'), findsOneWidget);
     expect(find.text('Acabaram os Pokémon!'), findsOneWidget);
+  });
+
+  testWidgets('card tem a cor do primeiro tipo', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MatchPage(
+          service: FakePokeApiService(
+            () async => [charmander],
+            firstTypes: {4: 'fire'},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final card = tester.widget<Card>(
+      find.descendant(
+        of: find.byType(PokemonCard),
+        matching: find.byType(Card),
+      ),
+    );
+    expect(card.color, typeColor('fire'));
   });
 }

@@ -9,13 +9,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 // Card grande de um Pokémon: imagem em cima, nome e número embaixo.
 class PokemonCard extends StatelessWidget {
   final Pokemon pokemon;
+  final Color color; // fundo: a cor do primeiro tipo
 
-  const PokemonCard({super.key, required this.pokemon});
+  const PokemonCard({super.key, required this.pokemon, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: Colors.white,
+      color: color,
       // Column empilha os filhos de cima para baixo.
       child: Column(
         children: [
@@ -30,9 +31,13 @@ class PokemonCard extends StatelessWidget {
           ),
           Text(
             pokemon.name,
-            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
-          Text(pokemon.number),
+          Text(pokemon.number, style: const TextStyle(color: Colors.white70)),
           const SizedBox(height: 16),
         ],
       ),
@@ -114,6 +119,7 @@ class MatchPage extends StatefulWidget {
 class _MatchPageState extends State<MatchPage> {
   List<Pokemon> _deck = []; // o monte: o primeiro é o card da frente
   final List<Pokemon> _captured = []; // os que foram para a mochila
+  Map<int, String> _types = {}; // número do Pokémon -> primeiro tipo
 
   // Future = um valor que ainda vai chegar (a resposta da internet).
   // late: só é calculado no primeiro uso, quando já existe acesso a widget.
@@ -122,12 +128,14 @@ class _MatchPageState extends State<MatchPage> {
   // async/await: espera a lista chegar e embaralha o monte.
   Future<void> _loadDeck() async {
     final pokemons = await widget.service.fetchPokemons();
+    final types = await widget.service.fetchFirstTypes();
     // SharedPreferences guarda dados simples no aparelho (no Chrome, no
     // navegador). Aqui ele devolve os números que já foram capturados.
     final prefs = await SharedPreferences.getInstance();
     final savedIds = prefs.getStringList('captured') ?? [];
     // setState: o contador fica fora do FutureBuilder, então avisamos.
     setState(() {
+      _types = types;
       _captured.addAll(pokemons.where((p) => savedIds.contains('${p.id}')));
       // O monte fica só com quem ainda não foi capturado.
       _deck = pokemons.where((p) => !_captured.contains(p)).toList()..shuffle();
@@ -205,7 +213,11 @@ class _MatchPageState extends State<MatchPage> {
                       // O último da lista fica na frente.
                       child: Stack(
                         children: [
-                          if (_deck.length > 1) PokemonCard(pokemon: _deck[1]),
+                          if (_deck.length > 1)
+                            PokemonCard(
+                              pokemon: _deck[1],
+                              color: typeColor(_types[_deck[1].id]),
+                            ),
                           // O card da frente dá para arrastar. A key faz o
                           // Flutter criar um SwipeCard novo a cada Pokémon.
                           SwipeCard(
@@ -214,7 +226,10 @@ class _MatchPageState extends State<MatchPage> {
                             // Tocar no card (sem arrastar) abre o perfil.
                             child: GestureDetector(
                               onTap: _openProfile,
-                              child: PokemonCard(pokemon: _deck.first),
+                              child: PokemonCard(
+                                pokemon: _deck.first,
+                                color: typeColor(_types[_deck.first.id]),
+                              ),
                             ),
                           ),
                         ],
