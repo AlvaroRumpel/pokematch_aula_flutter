@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:pokematch/match_page.dart';
+
 void main() => runApp(const PokeMatchApp());
 
 // Tudo no Flutter é widget: o app, a tela, o texto e até o espaçamento.
@@ -21,14 +23,8 @@ class PokeMatchApp extends StatelessWidget {
           foregroundColor: Colors.white,
         ),
       ),
-      home: Scaffold(
-        appBar: AppBar(title: const Text('PokéMatch')),
-        // Dica: com "flutter run", salve o arquivo e aperte "r" (hot reload)
-        // para ver a mudança na hora, sem reiniciar o app.
-        body: const Center(
-          child: Text('Bora capturar!', style: TextStyle(fontSize: 24)),
-        ),
-      ),
+      // A primeira tela do app.
+      home: const MatchPage(),
     );
   }
 }
