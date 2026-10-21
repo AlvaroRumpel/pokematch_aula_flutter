@@ -4,6 +4,7 @@ import 'package:pokematch/my_pokedex_page.dart';
 import 'package:pokematch/pokeapi_service.dart';
 import 'package:pokematch/pokemon.dart';
 import 'package:pokematch/profile_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Card grande de um Pokémon: imagem em cima, nome e número embaixo.
 class PokemonCard extends StatelessWidget {
@@ -121,15 +122,29 @@ class _MatchPageState extends State<MatchPage> {
   // async/await: espera a lista chegar e embaralha o monte.
   Future<void> _loadDeck() async {
     final pokemons = await widget.service.fetchPokemons();
-    _deck = pokemons..shuffle();
+    // SharedPreferences guarda dados simples no aparelho (no Chrome, no
+    // navegador). Aqui ele devolve os números que já foram capturados.
+    final prefs = await SharedPreferences.getInstance();
+    final savedIds = prefs.getStringList('captured') ?? [];
+    // setState: o contador fica fora do FutureBuilder, então avisamos.
+    setState(() {
+      _captured.addAll(pokemons.where((p) => savedIds.contains('${p.id}')));
+      // O monte fica só com quem ainda não foi capturado.
+      _deck = pokemons.where((p) => !_captured.contains(p)).toList()..shuffle();
+    });
   }
 
   // setState avisa o Flutter: "algo mudou, desenhe a tela de novo".
-  void _swipe(bool capture) {
+  Future<void> _swipe(bool capture) async {
     setState(() {
       final pokemon = _deck.removeAt(0);
       if (capture) _captured.add(pokemon);
     });
+    // Grava no aparelho os números dos capturados, como texto.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('captured', [
+      for (final pokemon in _captured) '${pokemon.id}',
+    ]);
   }
 
   // Navigator.push empilha uma nova tela sobre a atual.

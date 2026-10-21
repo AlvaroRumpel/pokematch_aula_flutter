@@ -8,6 +8,7 @@ import 'package:pokematch/my_pokedex_page.dart';
 import 'package:pokematch/pokeapi_service.dart';
 import 'package:pokematch/pokemon.dart';
 import 'package:pokematch/profile_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Serviço falso: devolve o que o teste mandar, sem internet.
 class FakePokeApiService extends PokeApiService {
@@ -37,8 +38,12 @@ Widget app(Future<List<Pokemon>> Function() fetch) =>
     MaterialApp(home: MatchPage(service: FakePokeApiService(fetch)));
 
 const bulbasaur = Pokemon(id: 1, name: 'Bulbasaur');
+const charmander = Pokemon(id: 4, name: 'Charmander');
 
 void main() {
+  // Cada teste começa sem nada salvo no aparelho.
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   testWidgets('mostra carregando', (tester) async {
     await tester.pumpWidget(app(() => Completer<List<Pokemon>>().future));
     await tester.pump();
@@ -198,5 +203,36 @@ void main() {
       const MaterialApp(home: MyPokedexPage(captured: [])),
     );
     expect(find.text('Ninguém capturado ainda.'), findsOneWidget);
+  });
+
+  testWidgets('capturar salva o número', (tester) async {
+    await tester.pumpWidget(app(() async => [bulbasaur]));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.favorite));
+    await tester.pumpAndSettle();
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getStringList('captured'), ['1']);
+  });
+
+  testWidgets('abre com os capturados salvos', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'captured': ['4'],
+    });
+    await tester.pumpWidget(app(() async => [bulbasaur, charmander]));
+    await tester.pumpAndSettle();
+    expect(find.text('🎒 1'), findsOneWidget);
+    expect(find.text('Bulbasaur'), findsOneWidget);
+    // Já capturado: fica fora do monte.
+    expect(find.text('Charmander'), findsNothing);
+  });
+
+  testWidgets('todos capturados mostra monte vazio', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'captured': ['1'],
+    });
+    await tester.pumpWidget(app(() async => [bulbasaur]));
+    await tester.pumpAndSettle();
+    expect(find.text('🎒 1'), findsOneWidget);
+    expect(find.text('Acabaram os Pokémon!'), findsOneWidget);
   });
 }
