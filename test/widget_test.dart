@@ -235,4 +235,19 @@ void main() {
     expect(find.text('🎒 1'), findsOneWidget);
     expect(find.text('Acabaram os Pokémon!'), findsOneWidget);
   });
+
+  testWidgets('desfazer traz o último card e tira da mochila', (tester) async {
+    await tester.pumpWidget(app(() async => [bulbasaur]));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.favorite));
+    await tester.pumpAndSettle();
+    expect(find.text('🎒 1'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.undo));
+    await tester.pumpAndSettle();
+    expect(find.text('🎒 0'), findsOneWidget);
+    expect(find.text('Bulbasaur'), findsOneWidget);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getStringList('captured'), isEmpty);
+  });
 }

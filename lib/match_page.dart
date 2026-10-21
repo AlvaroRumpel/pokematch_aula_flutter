@@ -114,6 +114,7 @@ class MatchPage extends StatefulWidget {
 class _MatchPageState extends State<MatchPage> {
   List<Pokemon> _deck = []; // o monte: o primeiro é o card da frente
   final List<Pokemon> _captured = []; // os que foram para a mochila
+  final List<Pokemon> _history = []; // os que saíram do monte, em ordem
 
   // Future = um valor que ainda vai chegar (a resposta da internet).
   // late: só é calculado no primeiro uso, quando já existe acesso a widget.
@@ -134,17 +135,33 @@ class _MatchPageState extends State<MatchPage> {
     });
   }
 
-  // setState avisa o Flutter: "algo mudou, desenhe a tela de novo".
-  Future<void> _swipe(bool capture) async {
-    setState(() {
-      final pokemon = _deck.removeAt(0);
-      if (capture) _captured.add(pokemon);
-    });
-    // Grava no aparelho os números dos capturados, como texto.
+  // Grava no aparelho os números dos capturados, como texto.
+  Future<void> _save() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('captured', [
       for (final pokemon in _captured) '${pokemon.id}',
     ]);
+  }
+
+  // setState avisa o Flutter: "algo mudou, desenhe a tela de novo".
+  void _swipe(bool capture) {
+    setState(() {
+      final pokemon = _deck.removeAt(0);
+      if (capture) _captured.add(pokemon);
+      _history.add(pokemon);
+    });
+    _save();
+  }
+
+  // Desfazer: o último que saiu volta para a frente do monte.
+  // Se ele tinha sido capturado, sai da mochila também.
+  void _undo() {
+    setState(() {
+      final pokemon = _history.removeLast();
+      _captured.remove(pokemon);
+      _deck.insert(0, pokemon);
+    });
+    _save();
   }
 
   // Navigator.push empilha uma nova tela sobre a atual.
@@ -164,6 +181,13 @@ class _MatchPageState extends State<MatchPage> {
       appBar: AppBar(
         title: const Text('PokéMatch'),
         actions: [
+          // Desfazer: desligado (null) quando nada saiu do monte ainda.
+          IconButton(
+            onPressed: _history.isEmpty ? null : _undo,
+            icon: const Icon(Icons.undo),
+            tooltip: 'Desfazer',
+            disabledColor: Colors.white38,
+          ),
           // Contador da mochila: tocar abre a Minha Pokédex.
           TextButton(
             onPressed: () => Navigator.push(
