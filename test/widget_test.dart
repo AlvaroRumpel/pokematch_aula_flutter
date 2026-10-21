@@ -235,4 +235,31 @@ void main() {
     expect(find.text('🎒 1'), findsOneWidget);
     expect(find.text('Acabaram os Pokémon!'), findsOneWidget);
   });
+
+  testWidgets('arrastar para cima dá super like e salva a estrela', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(() async => [bulbasaur]));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(PokemonCard).last, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(find.text('🎒 1'), findsOneWidget);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getStringList('captured'), ['1']);
+    expect(prefs.getStringList('stars'), ['1']);
+
+    await tester.tap(find.text('🎒 1'));
+    await tester.pumpAndSettle();
+    expect(find.text('⭐ Bulbasaur'), findsOneWidget);
+  });
+
+  testWidgets('botão ⭐ dá super like', (tester) async {
+    await tester.pumpWidget(app(() async => [bulbasaur]));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.star));
+    await tester.pumpAndSettle();
+    expect(find.text('🎒 1'), findsOneWidget);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getStringList('stars'), ['1']);
+  });
 }

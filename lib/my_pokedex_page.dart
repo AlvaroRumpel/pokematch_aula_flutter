@@ -4,9 +4,14 @@ import 'package:pokematch/pokemon.dart';
 
 // Minha Pokédex: a grade com os Pokémon capturados.
 class MyPokedexPage extends StatelessWidget {
-  const MyPokedexPage({super.key, required this.captured});
+  const MyPokedexPage({
+    super.key,
+    required this.captured,
+    this.stars = const {},
+  });
 
   final List<Pokemon> captured; // a lista veio do monte
+  final Set<int> stars; // números de quem ganhou super like
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +36,12 @@ class MyPokedexPage extends StatelessWidget {
                                 const Icon(Icons.catching_pokemon, size: 48),
                           ),
                         ),
-                        Text(pokemon.name),
+                        // Super like ganha uma estrela antes do nome.
+                        Text(
+                          stars.contains(pokemon.id)
+                              ? '⭐ ${pokemon.name}'
+                              : pokemon.name,
+                        ),
                       ],
                     ),
                   ),
