@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:pokematch/match_page.dart';
+import 'package:pokematch/pokeapi_service.dart';
 
 void main() => runApp(const PokeMatchApp());
 
@@ -23,8 +24,8 @@ class PokeMatchApp extends StatelessWidget {
           foregroundColor: Colors.white,
         ),
       ),
-      // A primeira tela do app.
-      home: const MatchPage(),
+      // A primeira tela do app. Ela recebe o serviço que busca os Pokémon.
+      home: MatchPage(service: PokeApiService()),
     );
   }
 }

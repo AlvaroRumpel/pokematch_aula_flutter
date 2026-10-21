@@ -18,4 +18,21 @@ void main() {
       'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png',
     );
   });
+
+  test('fromJson extrai id da url com barra final e capitaliza', () {
+    final p = Pokemon.fromJson({
+      'name': 'pikachu',
+      'url': 'https://pokeapi.co/api/v2/pokemon/25/',
+    });
+    expect(p.id, 25);
+    expect(p.name, 'Pikachu');
+  });
+
+  test('pokemonsFromJson lê results', () {
+    const body =
+        '{"results":[{"name":"bulbasaur","url":"https://pokeapi.co/api/v2/pokemon/1/"},{"name":"ivysaur","url":"https://pokeapi.co/api/v2/pokemon/2/"}]}';
+    final list = pokemonsFromJson(body);
+    expect(list.length, 2);
+    expect(list[1].name, 'Ivysaur');
+  });
 }
