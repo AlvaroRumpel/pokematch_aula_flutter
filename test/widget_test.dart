@@ -16,11 +16,13 @@ class FakePokeApiService extends PokeApiService {
     this.onFetchPokemons, {
     this.onFetchDetails,
     this.typeIds = const {},
+    this.firstTypes = const {},
   });
 
   final Future<List<Pokemon>> Function() onFetchPokemons;
   final Future<PokemonDetails> Function()? onFetchDetails;
   final Map<String, Set<int>> typeIds; // tipo -> números dos Pokémon
+  final Map<int, String> firstTypes; // número -> primeiro tipo
 
   @override
   Future<List<Pokemon>> fetchPokemons() => onFetchPokemons();
@@ -33,6 +35,9 @@ class FakePokeApiService extends PokeApiService {
 
   @override
   Future<Set<int>> fetchTypeIds(String type) async => typeIds[type] ?? {};
+
+  @override
+  Future<Map<int, String>> fetchFirstTypes() async => firstTypes;
 }
 
 Widget profile(Future<PokemonDetails> Function() details) => MaterialApp(
@@ -322,5 +327,26 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getStringList('captured'), isEmpty);
     expect(prefs.getStringList('stars'), isEmpty);
+  });
+
+  testWidgets('card tem a cor do primeiro tipo', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MatchPage(
+          service: FakePokeApiService(
+            () async => [charmander],
+            firstTypes: {4: 'fire'},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final card = tester.widget<Card>(
+      find.descendant(
+        of: find.byType(PokemonCard),
+        matching: find.byType(Card),
+      ),
+    );
+    expect(card.color, typeColor('fire'));
   });
 }

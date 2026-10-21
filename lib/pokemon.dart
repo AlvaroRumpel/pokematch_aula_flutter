@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart' show Color;
+
 // Modelo de dados: descreve um Pokémon com só o que o card precisa.
 class Pokemon {
   final int id;
@@ -63,23 +65,27 @@ class PokemonDetails {
   }
 }
 
-// Os 17 tipos da primeira geração, para o menu do filtro.
-const pokemonTypes = [
-  'grass',
-  'poison',
-  'fire',
-  'water',
-  'bug',
-  'normal',
-  'electric',
-  'ground',
-  'fairy',
-  'fighting',
-  'psychic',
-  'rock',
-  'ghost',
-  'ice',
-  'dragon',
-  'flying',
-  'steel',
-];
+// Cor de cada tipo (todas têm bom contraste com texto branco).
+// As chaves também servem de lista com todos os tipos.
+const typeColors = {
+  'grass': Color(0xFF3F7F2F),
+  'poison': Color(0xFF8A3F9E),
+  'fire': Color(0xFFC8501E),
+  'water': Color(0xFF2A6DD7),
+  'bug': Color(0xFF6B7F1A),
+  'normal': Color(0xFF6E6E5A),
+  'electric': Color(0xFF9A7B00),
+  'ground': Color(0xFF8A6A2F),
+  'fairy': Color(0xFFB0477F),
+  'fighting': Color(0xFFA0302A),
+  'psychic': Color(0xFFC23B6E),
+  'rock': Color(0xFF7F6F2A),
+  'ghost': Color(0xFF5A4A8A),
+  'ice': Color(0xFF3E8C8C),
+  'dragon': Color(0xFF5530C8),
+  'flying': Color(0xFF6A5ACD),
+  'steel': Color(0xFF6A6A80),
+};
+
+// Tipo que não veio (ou desconhecido): cinza.
+Color typeColor(String? type) => typeColors[type] ?? const Color(0xFF5F5F5F);

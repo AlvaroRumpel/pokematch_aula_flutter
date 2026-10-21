@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pokematch/pokemon.dart';
 
@@ -52,5 +53,11 @@ void main() {
     expect(d.types, ['grass', 'poison']);
     expect(d.height, 0.7);
     expect(d.weight, 6.9);
+  });
+
+  test('tipo desconhecido usa cor padrão', () {
+    expect(typeColor('stellar'), const Color(0xFF5F5F5F));
+    expect(typeColor(null), const Color(0xFF5F5F5F));
+    expect(typeColor('grass'), const Color(0xFF3F7F2F));
   });
 }

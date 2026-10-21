@@ -9,13 +9,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 // Card grande de um Pokémon: imagem em cima, nome e número embaixo.
 class PokemonCard extends StatelessWidget {
   final Pokemon pokemon;
+  final Color color; // fundo: a cor do primeiro tipo
 
-  const PokemonCard({super.key, required this.pokemon});
+  const PokemonCard({super.key, required this.pokemon, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: Colors.white,
+      color: color,
       // Column empilha os filhos de cima para baixo.
       child: Column(
         children: [
@@ -30,9 +31,13 @@ class PokemonCard extends StatelessWidget {
           ),
           Text(
             pokemon.name,
-            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
-          Text(pokemon.number),
+          Text(pokemon.number, style: const TextStyle(color: Colors.white70)),
           const SizedBox(height: 16),
         ],
       ),
@@ -124,6 +129,7 @@ class _MatchPageState extends State<MatchPage> {
   final List<Pokemon> _history = []; // os que saíram do monte, em ordem
   String _type = ''; // tipo escolhido no filtro; vazio = todos
   final Set<int> _stars = {}; // números de quem ganhou super like
+  Map<int, String> _types = {}; // número do Pokémon -> primeiro tipo
 
   // Future = um valor que ainda vai chegar (a resposta da internet).
   // late: só é calculado no primeiro uso, quando já existe acesso a widget.
@@ -136,12 +142,14 @@ class _MatchPageState extends State<MatchPage> {
     final typeIds = _type.isEmpty
         ? null
         : await widget.service.fetchTypeIds(_type);
+    final types = await widget.service.fetchFirstTypes();
     // SharedPreferences guarda dados simples no aparelho (no Chrome, no
     // navegador). Aqui ele devolve os números que já foram capturados.
     final prefs = await SharedPreferences.getInstance();
     final savedIds = prefs.getStringList('captured') ?? [];
     // setState: o contador fica fora do FutureBuilder, então avisamos.
     setState(() {
+      _types = types;
       _captured
         ..clear()
         ..addAll(pokemons.where((p) => savedIds.contains('${p.id}')));
@@ -236,7 +244,7 @@ class _MatchPageState extends State<MatchPage> {
                 checked: _type.isEmpty,
                 child: const Text('todos'),
               ),
-              for (final type in pokemonTypes)
+              for (final type in typeColors.keys)
                 CheckedPopupMenuItem(
                   value: type,
                   checked: _type == type,
@@ -286,7 +294,11 @@ class _MatchPageState extends State<MatchPage> {
                       // O último da lista fica na frente.
                       child: Stack(
                         children: [
-                          if (_deck.length > 1) PokemonCard(pokemon: _deck[1]),
+                          if (_deck.length > 1)
+                            PokemonCard(
+                              pokemon: _deck[1],
+                              color: typeColor(_types[_deck[1].id]),
+                            ),
                           // O card da frente dá para arrastar. A key faz o
                           // Flutter criar um SwipeCard novo a cada Pokémon.
                           SwipeCard(
@@ -295,7 +307,10 @@ class _MatchPageState extends State<MatchPage> {
                             // Tocar no card (sem arrastar) abre o perfil.
                             child: GestureDetector(
                               onTap: _openProfile,
-                              child: PokemonCard(pokemon: _deck.first),
+                              child: PokemonCard(
+                                pokemon: _deck.first,
+                                color: typeColor(_types[_deck.first.id]),
+                              ),
                             ),
                           ),
                         ],
